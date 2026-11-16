@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClipForge – Video Converter & Compressor</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#14181f">
+<style>
+:root{
+  --bg:#0f1218; --panel:#171c25; --panel2:#1e2430; --line:#2a3240; --text:#e7ebf2; --muted:#8e99ab;
+  --accent:#ff8a3d; --accent2:#ffb37d; --ok:#4fd18b; --err:#ff5c6c; --radius:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:#0c0f14ee;backdrop-filter:blur(6px);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;padding:10px 16px}
+header h1{font-size:18px;margin:0;letter-spacing:.3px}
+header .ver{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:2px 8px}
+header .status{margin-left:auto;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;background:#666}
+.dot.ready{background:var(--ok)} .dot.busy{background:var(--accent)} .dot.err{background:var(--err)}
+main{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-columns:1fr 380px;grid-template-areas:"add set" "guide set";align-items:start;gap:16px}
+.addcol{grid-area:add}.setcol{grid-area:set;position:sticky;top:64px}.guidecol{grid-area:guide}
+@media(max-width:900px){main{grid-template-columns:1fr;grid-template-areas:"add" "set" "guide"}.setcol{position:static}}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:0 0 12px}
+#drop{border:2px dashed var(--line);border-radius:var(--radius);padding:28px 16px;text-align:center;cursor:pointer;transition:.15s}
+#drop:hover,#drop.over{border-color:var(--accent);background:#ff8a3d10}
+#drop b{color:var(--accent)}
+#drop small{display:block;color:var(--muted);margin-top:6px}
+.queue{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.item{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}
+.item .top{display:flex;gap:10px;align-items:flex-start}
+.item .name{font-weight:600;word-break:break-all}
+.item .meta{color:var(--muted);font-size:13px}
+.item .rm{margin-left:auto;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
+.bar{height:6px;background:#0c0f14;border-radius:4px;overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
+.result{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
+.result .saving{color:var(--ok);font-weight:600}
+.result .bigger{color:var(--err);font-weight:600}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
+select,input[type=number],input[type=text]{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;background:none;border:none;color:var(--muted);padding:9px 4px;font-size:13px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#1a0f05;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chips button{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:5px 11px;font-size:12px;cursor:pointer}
+.chips button.on{border-color:var(--accent);color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin-top:5px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:9px;padding:11px 16px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none}
+.btn.primary{background:var(--accent);color:#1a0f05;width:100%;margin-top:16px;font-size:15px}
+.btn.primary:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:7px 12px;font-size:13px}
+.btn.danger{background:#3a1a20;color:#ffb3bb;width:100%;margin-top:8px}
+.hidden{display:none!important}
+details{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;color:var(--muted);font-size:13px}
+#log{white-space:pre-wrap;font:11px/1.35 ui-monospace,Consolas,monospace;color:#9fb0c6;max-height:240px;overflow:auto;background:#0c0f14;border-radius:8px;padding:8px;margin-top:8px}
+.help h3{font-size:14px;margin:14px 0 4px;color:var(--accent2)}
+.help p,.help li{font-size:13px;color:#c3cad6;margin:4px 0}
+.help table{width:100%;border-collapse:collapse;font-size:12.5px}
+.help td,.help th{border-bottom:1px solid var(--line);padding:5px 4px;text-align:left;vertical-align:top}
+.help th{color:var(--muted);font-weight:500}
+.est{background:#0c0f14;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;margin-top:12px}
+.est b{color:var(--accent2)}
+video.preview{width:100%;max-height:220px;border-radius:8px;margin-top:8px;background:#000}
+.warn{color:#ffd27d;font-size:12px;margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="4" y="12" width="44" height="40" rx="8" fill="#ff8a3d"/><path d="M48 26l12-8v28l-12-8z" fill="#ffb37d"/><path d="M18 24l14 8-14 8z" fill="#1a0f05"/></svg>
+  <h1>ClipForge</h1><span class="ver" id="ver">v1.1.0</span>
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">Loading engine…</span></div>
+</header>
+
+<main>
+  <div class="addcol">
+    <section class="card">
+      <h2>1 · Add videos</h2>
+      <div id="drop" tabindex="0">
+        <b>Tap to choose videos</b> or drop them here
+        <small>MP4, AVI, WMV, MOV, MKV, WebM, FLV, 3GP, MPG, TS, M4V … · several files at once allowed · nothing is uploaded, everything happens on this device</small>
+      </div>
+      <input type="file" id="file" accept="video/*,audio/*,.mkv,.wmv,.avi,.flv,.ts,.mts,.m2ts,.vob,.3gp,.mpg,.mpeg,.m4v,.asf,.ogv" multiple class="hidden">
+      <div class="queue" id="queue"></div>
+    </section>
+
+
+  </div>
+
+  <aside class="setcol">
+    <section class="card" id="settings">
+      <h2>2 · Settings</h2>
+      <label for="fmt">Output format</label>
+      <select id="fmt">
+        <optgroup label="Video">
+          <option value="mp4" selected>MP4 – H.264 (recommended)</option>
+          <option value="wmv">WMV – Windows Media</option>
+          <option value="avi">AVI – Xvid / MPEG-4</option>
+          <option value="mkv">MKV – Matroska</option>
+          <option value="mov">MOV – QuickTime</option>
+          <option value="webm">WebM – VP8</option>
+          <option value="mpg">MPG – MPEG-2</option>
+          <option value="flv">FLV – Flash video</option>
+          <option value="3gp">3GP – basic phones</option>
+          <option value="gif">GIF – animated image</option>
+        </optgroup>
+        <optgroup label="Audio only">
+          <option value="mp3">MP3 audio</option>
+          <option value="m4a">M4A (AAC) audio</option>
+          <option value="wav">WAV (uncompressed) audio</option>
+        </optgroup>
+      </select>
+
+      <div id="compressBlock">
+        <label>Compression mode</label>
+        <div class="seg" id="mode">
+          <button data-v="quality" class="on">Quality</button>
+          <button data-v="size">Target size</button>
+          <button data-v="copy">Copy streams</button>
+        </div>
+
+        <div id="qualityBlock">
+          <label for="q">Picture quality: <b id="qv">60 %</b> <span id="qtech" class="hint"></span></label>
+          <input type="range" id="q" min="0" max="100" value="60">
+          <div class="chips" id="qpresets">
+            <button data-q="85">Light compression</button>
+            <button data-q="60" class="on">Balanced</button>
+            <button data-q="40">Strong</button>
+            <button data-q="20">Maximum</button>
+          </div>
+        </div>
+
+        <div id="sizeBlock" class="hidden">
+          <label for="target">Target file size (MB)</label>
+          <input type="number" id="target" min="0.5" step="0.5" value="16">
+          <div class="chips" id="spresets">
+            <button data-s="8">8 MB</button><button data-s="16" class="on">16 MB (WhatsApp)</button>
+            <button data-s="25">25 MB (Gmail)</button><button data-s="50">50 MB</button><button data-s="100">100 MB</button>
+          </div>
+          <div class="hint">Applied to every file in the list. 1 MB = 1 048 576 bytes.</div>
+        </div>
+        <div id="copyHint" class="hint hidden">Only the container changes; resolution, fps and audio settings are ignored.</div>
+      </div>
+
+      <div id="videoOpts">
+        <div class="row">
+          <div><label for="res">Resolution (max.)</label>
+            <select id="res"><option value="0">Keep original</option><option value="2160">2160p (4K)</option><option value="1080">1080p</option><option value="720">720p</option><option value="480">480p</option><option value="360">360p</option><option value="240">240p</option></select></div>
+          <div><label for="fps">Frame rate</label>
+            <select id="fps"><option value="0">Keep original</option><option value="60">60 fps</option><option value="30">30 fps</option><option value="25">25 fps</option><option value="24">24 fps</option><option value="15">15 fps</option><option value="10">10 fps</option></select></div>
+        </div>
+      </div>
+      <div id="audioOpts">
+        <label for="ab">Audio</label>
+        <select id="ab"><option value="192">192 kbit/s – high</option><option value="128" selected>128 kbit/s – good</option><option value="96">96 kbit/s – medium</option><option value="64">64 kbit/s – speech</option><option value="0">Remove audio</option></select>
+      </div>
+      <div id="speedOpts">
+        <label for="preset">Encoder speed</label>
+        <select id="preset"><option value="ultrafast">Fastest (larger file)</option><option value="veryfast" selected>Fast</option><option value="faster">Medium</option><option value="medium">Slow (smaller file)</option></select>
+      </div>
+      <div id="gifOpts" class="hidden">
+        <div class="hint">GIF uses at most 480 px width and 12 fps unless you pick lower values above. Quality slider controls colour dithering.</div>
+      </div>
+
+      <div class="est" id="est">Add a video to see details.</div>
+
+      <button class="btn primary" id="go" disabled>Convert</button>
+      <button class="btn danger hidden" id="cancel">Cancel</button>
+
+      <details><summary>Technical log (FFmpeg output)</summary><div id="log"></div></details>
+    </section>
+  </aside>
+  <div class="guidecol">
+    <section class="card help">
+      <h2>Guide – what the settings mean</h2>
+      <h3>Format = container + codec</h3>
+      <p>A video file is a <b>container</b> (the "box", recognised by the file ending such as .mp4) holding a <b>video stream</b> and an <b>audio stream</b>. Each stream is compressed by a <b>codec</b> (coder/decoder – the method used to shrink the pictures or sound). Converting changes the box and, usually, re-compresses the streams.</p>
+      <table>
+        <tr><th>Output</th><th>Video codec / audio codec used</th><th>Best for</th></tr>
+        <tr><td>MP4</td><td>H.264 / AAC</td><td>Everything: phones, PCs, TVs, web, WhatsApp. Smallest files for the quality. <b>Recommended.</b></td></tr>
+        <tr><td>WMV</td><td>WMV2 (Windows Media Video 8) / WMA2</td><td>Old Windows PCs, Windows Media Player, PowerPoint 2007–2010</td></tr>
+        <tr><td>AVI</td><td>MPEG-4 Part 2 ("Xvid") / MP3</td><td>Older DVD players, set-top boxes, legacy software</td></tr>
+        <tr><td>MKV</td><td>H.264 / AAC</td><td>PC media players (VLC, Kodi)</td></tr>
+        <tr><td>MOV</td><td>H.264 / AAC</td><td>Apple devices, iMovie, Final Cut</td></tr>
+        <tr><td>WebM</td><td>VP8 / Vorbis</td><td>Websites (HTML5 video)</td></tr>
+        <tr><td>MPG</td><td>MPEG-2 / MP2</td><td>DVD authoring, very old players</td></tr>
+        <tr><td>FLV</td><td>H.264 / AAC</td><td>Legacy Flash-based systems</td></tr>
+        <tr><td>3GP</td><td>H.264 baseline / AAC</td><td>Very old/basic mobile phones</td></tr>
+        <tr><td>GIF</td><td>animated image, no sound</td><td>Short loops for chats/slides (max. ~30 s recommended)</td></tr>
+        <tr><td>MP3 / M4A / WAV</td><td>audio only</td><td>Extracting the sound track</td></tr>
+      </table>
+      <h3>Compression modes</h3>
+      <ul>
+        <li><b>Quality</b> – you choose how good the picture should be (0–100 %); the file becomes as small as possible for that quality. The final size depends on the video content (a static lecture compresses far more than football).<br>Internally 100 % ≈ CRF 18 (visually lossless) and 0 % ≈ CRF 40 (very blurry). <i>CRF = Constant Rate Factor, the quality number of the H.264/VP8 encoders; lower CRF = better quality, larger file.</i> For WMV/AVI/MPG the equivalent "q-scale" 2 (best) … 31 (worst) is used.</li>
+        <li><b>Target size</b> – you enter the size you need in MB (e.g. 16 MB for an email/WhatsApp limit). The app computes the <b>bitrate</b> (data per second, in kbit/s = kilobits per second) from: (target size × 8) ÷ duration − audio bitrate. Results usually land within ±8 % of the target; if the first attempt is too big, the app automatically re-encodes with a lower bitrate (up to 3 passes) and, for very small targets, lowers the resolution so the picture stays clean. A target larger than the original is capped at 95 % of the original size.</li>
+        <li><b>Copy streams</b> – changes only the container, without re-compressing (seconds instead of minutes, no quality loss, same size). Only works if the target container supports the original codecs (e.g. MKV→MP4 with H.264 inside). If it fails, use Quality mode.</li>
+      </ul>
+      <h3>Other settings</h3>
+      <ul>
+        <li><b>Resolution</b> – size of the picture's short side in pixels (the height of a landscape video, the width of an upright phone video): 1080p = 1920×1080 (Full HD), 720p = 1280×720 (HD), 480p ≈ 854×480 (DVD-like), 360p ≈ 640×360. Halving the height roughly quarters the pixels and is the strongest size reducer. Videos are never enlarged.</li>
+        <li><b>Frame rate (fps)</b> – pictures per second. 30 fps looks smooth; 24 is cinema; 15 is fine for screen recordings/slides and saves space.</li>
+        <li><b>Audio bitrate</b> – 128 kbit/s = good music quality; 96 = good speech/music; 64 = speech only. "Remove audio" makes a silent video.</li>
+        <li><b>Encoder speed</b> (MP4/MKV/MOV/FLV/3GP) – slower settings produce ~10–20 % smaller files at equal quality but take 2–4× longer.</li>
+      </ul>
+      <h3>Limits</h3>
+      <p>Conversion runs inside your browser, without internet and without uploading anything. It uses one processor core, so expect roughly 0.3–1× real-time for 720p (a 10-minute 720p video ≈ 10–30 min). Files up to about <b>1.5 GB</b> work on a PC; on a phone keep to a few hundred MB. Copy-mode is always fast.</p>
+    </section>
+  </div>
+</main>
+
+<script src="lib/ffmpeg.js"></script>
+<script>
+"use strict";
+const VERSION = "1.1.0";
+const NATIVE = window.ClipForgeAndroid || null; // present inside the Android app
+const $ = s => document.querySelector(s);
+const MB = 1048576;
+const { FFmpeg } = FFmpegWASM;
+const fetchFile = async f => new Uint8Array(await f.arrayBuffer());
+
+let ff = null, engineReady = false, busy = false, cancelled = false;
+let logBuf = [], logListener = null;
+const queue = []; // {id,file,info,el,out}
+let idc = 0;
+
+/* ---------- format definitions ---------- */
+const FORMATS = {
+  mp4:{ext:"mp4", v:"x264", a:"aac", mime:"video/mp4", extra:["-movflags","+faststart"]},
+  mkv:{ext:"mkv", v:"x264", a:"aac", mime:"video/x-matroska"},
+  mov:{ext:"mov", v:"x264", a:"aac", mime:"video/quicktime", extra:["-movflags","+faststart"]},
+  flv:{ext:"flv", v:"x264", a:"aac", mime:"video/x-flv", ar:44100},
+  "3gp":{ext:"3gp", v:"x264base", a:"aac", mime:"video/3gpp", ac:1},
+  wmv:{ext:"wmv", v:"wmv2", a:"wmav2", mime:"video/x-ms-wmv"},
+  avi:{ext:"avi", v:"mpeg4", a:"mp3", mime:"video/x-msvideo"},
+  webm:{ext:"webm", v:"vp8", a:"vorbis", mime:"video/webm"},
+  mpg:{ext:"mpg", v:"mpeg2", a:"mp2", mime:"video/mpeg", ar:48000},
+  gif:{ext:"gif", v:"gif", a:null, mime:"image/gif"},
+  mp3:{ext:"mp3", v:null, a:"mp3", mime:"audio/mpeg"},
+  m4a:{ext:"m4a", v:null, a:"aac", mime:"audio/mp4"},
+  wav:{ext:"wav", v:null, a:"pcm", mime:"audio/wav"}
+};
+const AUDIO = { aac:["-c:a","aac"], mp3:["-c:a","libmp3lame"], wmav2:["-c:a","wmav2"], vorbis:["-c:a","libvorbis"], mp2:["-c:a","mp2"], pcm:["-c:a","pcm_s16le"] };
+
+/* ---------- UI state ---------- */
+const S = { mode:"quality" };
+function seg(container, cb){ container.addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return;
+  container.querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); cb(b); }); }
+seg($("#mode"), b=>{ S.mode=b.dataset.v; refreshUI(); });
+seg($("#qpresets"), b=>{ $("#q").value=b.dataset.q; refreshUI(); });
+seg($("#spresets"), b=>{ $("#target").value=b.dataset.s; refreshUI(); });
+["#fmt","#q","#target","#res","#fps","#ab","#preset"].forEach(s=>$(s).addEventListener("input", refreshUI));
+
+const crfX264 = q => Math.round(40 - q*0.22);
+const crfVpx  = q => Math.round(50 - q*0.40);
+const qscale  = q => Math.max(2, Math.round(31 - q*0.29));
+
+function refreshUI(){
+  const fmt = FORMATS[$("#fmt").value], q=+$("#q").value;
+  const isAudio = !fmt.v, isGif = fmt.v==="gif";
+  $("#qv").textContent = q+" %";
+  $("#qpresets").querySelectorAll("button").forEach(b=>b.classList.toggle("on", +b.dataset.q===q));
+  $("#spresets").querySelectorAll("button").forEach(b=>b.classList.toggle("on", +b.dataset.s===+$("#target").value));
+  let tech="";
+  if(fmt.v && fmt.v.startsWith("x264")) tech="(CRF "+crfX264(q)+")";
+  else if(fmt.v==="vp8") tech="(CRF "+crfVpx(q)+")";
+  else if(["wmv2","mpeg4","mpeg2"].includes(fmt.v)) tech="(q-scale "+qscale(q)+")";
+  else if(isAudio) tech="";
+  $("#qtech").textContent = tech;
+  // visibility
+  const modeBtns = $("#mode").querySelectorAll("button");
+  modeBtns[1].classList.toggle("hidden", isGif);
+  modeBtns[2].classList.toggle("hidden", isGif || fmt.a==="pcm");
+  if(isGif && S.mode!=="quality"){ S.mode="quality"; modeBtns.forEach(b=>b.classList.toggle("on", b.dataset.v==="quality")); }
+  if(isAudio && S.mode==="size"){ /* allowed: computes audio bitrate */ }
+  $("#qualityBlock").classList.toggle("hidden", S.mode!=="quality" || isAudio);
+  $("#sizeBlock").classList.toggle("hidden", S.mode!=="size");
+  $("#copyHint").classList.toggle("hidden", S.mode!=="copy");
+  $("#compressBlock").classList.toggle("hidden", fmt.a==="pcm");
+  const copy = S.mode==="copy";
+  $("#videoOpts").classList.toggle("hidden", isAudio || copy);
+  $("#audioOpts").classList.toggle("hidden", isGif || copy || fmt.a==="pcm" || (isAudio && S.mode==="size"));
+  $("#ab").querySelector('option[value="0"]').disabled = isAudio;
+  if(isAudio && $("#ab").value==="0") $("#ab").value="128";
+  $("#speedOpts").classList.toggle("hidden", copy || !(fmt.v && fmt.v.startsWith("x264")));
+  $("#gifOpts").classList.toggle("hidden", !isGif);
+  updateEstimate();
+}
+
+function fmtBytes(b){ if(b==null) return "?"; if(b<1024) return b+" B"; if(b<MB) return (b/1024).toFixed(0)+" KB"; if(b<1024*MB) return (b/MB).toFixed(1)+" MB"; return (b/1024/MB).toFixed(2)+" GB"; }
+function fmtTime(s){ if(!isFinite(s)) return "?"; s=Math.round(s); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60; return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(x).padStart(2,"0"); }
+
+function updateEstimate(){
+  const el=$("#est"); const items=queue.filter(i=>!i.done);
+  if(!queue.length){ el.innerHTML="Add a video to see details."; return; }
+  const total = queue.reduce((a,i)=>a+i.file.size,0);
+  let html = `<b>${queue.length}</b> file(s), ${fmtBytes(total)} in total.`;
+  const fmt = FORMATS[$("#fmt").value];
+  if(S.mode==="size"){
+    const t=+$("#target").value;
+    const bad = queue.filter(i=>i.info && i.info.duration && planBitrate(i.info.duration, fmt, i.file).v < (fmt.v?60:16));
+    html += `<br>Each output ≈ <b>${t} MB</b>.`;
+    const small = queue.filter(i=>i.file.size*0.95 < t*MB);
+    if(small.length) html += `<div class="hint">ℹ ${small.length} file(s) already smaller than ${t} MB – they will be compressed to ≈ 95 % of their own size instead, never made larger.</div>`;
+    if(bad.length) html += `<div class="warn">⚠ ${bad.length} file(s) too long for ${t} MB – picture would be unusable. Raise the target or lower the resolution.</div>`;
+    queue.forEach(i=>{ if(i.info && i.info.duration){ const p=planBitrate(i.info.duration, fmt, i.file); i.el.querySelector(".plan").textContent = fmt.v? `→ video ${p.v} kbit/s + audio ${p.a} kbit/s` : `→ audio ${p.a} kbit/s`; }});
+  } else queue.forEach(i=>{ const p=i.el.querySelector(".plan"); if(p) p.textContent=""; });
+  if(S.mode==="copy") html += "<br>Copy mode: output size ≈ input size.";
+  if(items.length===0 && queue.length) html += "<br>All done ✓";
+  el.innerHTML=html;
+}
+
+function effTarget(file){ const t=+$("#target").value*MB; return file && t>file.size*0.95 ? file.size*0.95 : t; }
+function planBitrate(duration, fmt, file){
+  const totalKbps = (effTarget(file) * 8 / 1000) / duration * 0.96; // 4 % container overhead margin
+  if(!fmt.v){ return { v:0, a: Math.max(16, Math.min(320, Math.floor(totalKbps))) }; }
+  let a = +$("#ab").value; if(fmt.a===null) a=0;
+  if(a && totalKbps < a*3) a = Math.max(32, Math.floor(totalKbps/4)); // starve audio a bit for tiny targets
+  return { v: Math.max(1, Math.floor(totalKbps - a)), a };
+}
+
+/* ---------- file intake ---------- */
+const drop=$("#drop"), fileInput=$("#file");
+drop.addEventListener("click", ()=>fileInput.click());
+drop.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" ") fileInput.click(); });
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev, e=>{e.preventDefault(); drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev, e=>{e.preventDefault(); drop.classList.remove("over");}));
+drop.addEventListener("drop", e=>addFiles(e.dataTransfer.files));
+fileInput.addEventListener("change", ()=>{ addFiles(fileInput.files); fileInput.value=""; });
+
+function addFiles(list){
+  for(const f of list){
+    const it={id:++idc, file:f, info:null, done:false};
+    const el=document.createElement("div"); el.className="item";
+    el.innerHTML=`<div class="top"><div><div class="name"></div><div class="meta">${fmtBytes(f.size)} · reading…</div><div class="meta plan"></div></div><button class="rm" title="Remove">✕</button></div>
+      <div class="bar"><i></i></div><div class="meta stage"></div><div class="result"></div>`;
+    el.querySelector(".name").textContent=f.name;
+    el.querySelector(".rm").onclick=()=>{ if(busy && it.active) return; queue.splice(queue.indexOf(it),1); el.remove(); updateEstimate(); updateGo(); };
+    if(f.size > 1.5*1024*MB) el.querySelector(".stage").innerHTML='<span class="warn">⚠ Larger than 1.5 GB – may exceed browser memory.</span>';
+    $("#queue").appendChild(el); it.el=el; queue.push(it);
+    probe(it);
+  }
+  updateEstimate(); updateGo();
+}
+
+/* ---------- engine ---------- */
+function setStatus(t, cls){ $("#statusText").textContent=t; $("#dot").className="dot "+(cls||""); }
+function log(line){ logBuf.push(line); if(logBuf.length>800) logBuf.splice(0,200); const L=$("#log"); L.textContent=logBuf.join("\n"); L.scrollTop=L.scrollHeight; }
+
+async function loadEngine(){
+  setStatus("Loading engine…","busy");
+  ff = new FFmpeg();
+  ff.on("log", ({message})=>{ log(message); if(logListener) logListener(message); });
+  const base = new URL("core/", location.href).href;
+  await ff.load({ coreURL: base+"ffmpeg-core.js", wasmURL: base+"ffmpeg-core.wasm" });
+  engineReady=true; setStatus("Ready (offline)","ready"); updateGo();
+}
+async function restartEngine(){ try{ ff.terminate(); }catch(e){} engineReady=false; await loadEngine(); }
+
+let probeChain = Promise.resolve();
+function probe(it){
+  probeChain = probeChain.then(async ()=>{
+    while(!engineReady) await new Promise(r=>setTimeout(r,200));
+    while(busy) await new Promise(r=>setTimeout(r,300));
+    busy=true;
+    const name="probe_"+it.id+ext(it.file.name);
+    try{
+      const path = await mountInput(it.file, name);
+      const lines=[]; logListener=m=>lines.push(m);
+      await ff.exec(["-hide_banner","-i",path]);
+      logListener=null;
+      it.info=parseInfo(lines.join("\n"));
+      await unmountInput(name);
+    }catch(e){ log("probe error "+e); it.info={}; }
+    finally{ busy=false; }
+    const i=it.info, meta=it.el.querySelector(".meta");
+    const parts=[fmtBytes(it.file.size)];
+    if(i.duration) parts.push(fmtTime(i.duration));
+    if(i.w) parts.push(i.w+"×"+i.h);
+    if(i.fps) parts.push(i.fps+" fps");
+    if(i.vcodec) parts.push(i.vcodec);
+    if(i.acodec) parts.push(i.acodec); else if(i.vcodec) parts.push("no audio");
+    if(!i.vcodec && !i.acodec) parts.push("⚠ not recognised as video");
+    meta.textContent=parts.join(" · ");
+    updateEstimate();
+  });
+}
+function ext(n){ const m=/\.[a-z0-9]{1,5}$/i.exec(n); return m?m[0].toLowerCase():".bin"; }
+function parseInfo(t){
+  const i={};
+  let m=/Duration: (\d+):(\d+):(\d+(?:\.\d+)?)/.exec(t); if(m) i.duration=+m[1]*3600 + +m[2]*60 + +m[3];
+  m=/Stream #[^\n]*Video: ([a-z0-9_]+)[^\n]*?, (\d{2,5})x(\d{2,5})/i.exec(t); if(m){ i.vcodec=m[1]; i.w=+m[2]; i.h=+m[3]; }
+  m=/Stream #[^\n]*Video:[^\n]*?([\d.]+) fps/.exec(t); if(m) i.fps=+(+m[1]).toFixed(2);
+  m=/Stream #[^\n]*Audio: ([a-z0-9_]+)/i.exec(t); if(m) i.acodec=m[1];
+  m=/rotate\s*:\s*(-?\d+)/.exec(t); if(m) i.rotate=+m[1];
+  m=/displaymatrix: rotation of (-?[\d.]+)/.exec(t); if(m) i.rotate=Math.round(+m[1]);
+  return i;
+}
+// WORKERFS mounting avoids copying the whole file into memory (big files). Falls back to writeFile.
+let mounted=false;
+async function mountInput(file, name){
+  try{
+    await ff.createDir("/in").catch(()=>{});
+    const named = new File([file], name, {type:file.type});
+    await ff.mount("WORKERFS", {files:[named]}, "/in");
+    mounted=true; return "/in/"+name;
+  }catch(e){
+    mounted=false; await ff.writeFile(name, await fetchFile(file)); return name;
+  }
+}
+async function unmountInput(name){
+  if(mounted){ try{ await ff.unmount("/in"); }catch(e){} mounted=false; }
+  else { try{ await ff.deleteFile(name); }catch(e){} }
+}
+
+/* ---------- build ffmpeg args ---------- */
+function buildArgs(inp, out, it, ov){
+  ov = ov || {};
+  const fmt=FORMATS[$("#fmt").value], q=+$("#q").value, info=it.info||{};
+  const a=["-hide_banner","-y","-i",inp];
+  if(S.mode==="copy"){
+    if(!fmt.v) a.push("-vn","-c:a","copy"); else a.push("-map","0:v:0?","-map","0:a:0?","-c","copy");
+    if(fmt.extra) a.push(...fmt.extra);
+    a.push(out); return a;
+  }
+  let res=+$("#res").value; const fps=+$("#fps").value;
+  let ab=+$("#ab").value;
+  const plan = S.mode==="size" && info.duration ? planBitrate(info.duration, fmt, it.file) : null;
+  if(plan){ ab = plan.a; plan.v = Math.max(1, Math.floor(plan.v * (ov.vbScale||1))); }
+  // Target-size mode: if the bitrate is too low for this resolution, shrink the picture automatically
+  // (bits per pixel per frame below the codec's useful minimum just produces blocks and overshoots).
+  if(plan && fmt.v!=="gif" && info.w && info.h){
+    const minBpp = fmt.v.startsWith("x264") ? 0.025 : fmt.v==="vp8" ? 0.035 : 0.07;
+    const ofps = Math.min(fps||info.fps||30, info.fps||30);
+    const steps=[2160,1440,1080,720,540,480,360,240,180];
+    let shortSide = Math.min(res||1e9, Math.min(info.w,info.h)), ratio=Math.max(info.w,info.h)/Math.min(info.w,info.h);
+    while(plan.v*1000/(shortSide*shortSide*ratio*ofps) < minBpp && shortSide>180){
+      const next=steps.find(x=>x<shortSide); if(!next) break; shortSide=next;
+    }
+    if(ov.extraDown){ for(let k=0;k<ov.extraDown;k++){ const next=steps.find(x=>x<shortSide); if(next) shortSide=next; } }
+    if(shortSide < Math.min(info.w,info.h) && (!res || shortSide<res)){ res=shortSide; it.autoRes=shortSide; } else it.autoRes=0;
+  }
+
+  if(!fmt.v){ // audio only
+    a.push("-vn", ...AUDIO[fmt.a]);
+    if(fmt.a!=="pcm") a.push("-b:a", ab+"k");
+    a.push(out); return a;
+  }
+  if(fmt.v==="gif"){
+    const maxW = 480, gfps = fps? Math.min(fps,12) : 12;
+    const hcap = res ? `,scale=-2:'min(ih,${res})':flags=lanczos` : "";
+    const dither = q>=70 ? "sierra2_4a" : q>=40 ? "bayer:bayer_scale=3" : "none";
+    const colors = Math.max(32, Math.round(64 + q*1.92));
+    a.push("-vf", `fps=${gfps},scale='min(iw,${maxW})':-2:flags=lanczos${hcap},split[s0][s1];[s0]palettegen=max_colors=${Math.min(256,colors)}:stats_mode=diff[p];[s1][p]paletteuse=dither=${dither}`, "-loop","0", out);
+    return a;
+  }
+  // video filters
+  const vf=[];
+  if(fps && (!info.fps || fps < info.fps-0.01)) vf.push("fps="+fps);
+  if(res && info.h && Math.min(info.w,info.h) > res){
+    // "720p" limits the SHORT side to 720 px: landscape -> height, portrait -> width.
+    // ffmpeg auto-rotates phone videos first, so a 90°-rotated stream swaps orientation.
+    let portrait = info.h > info.w;
+    if(info.rotate && Math.abs(info.rotate)%180===90) portrait = !portrait;
+    vf.push(portrait ? `scale=${res}:-2` : `scale=-2:${res}`);
+  } else vf.push("scale='trunc(iw/2)*2':'trunc(ih/2)*2'");
+  if(fmt.v==="mpeg2" && !fps && info.fps && ![23.98,24,25,29.97,30,50,59.94,60].some(x=>Math.abs(x-info.fps)<0.02)) vf.unshift("fps=25");
+  vf.push("format=yuv420p");
+  a.push("-map","0:v:0","-map","0:a:0?","-vf",vf.join(","));
+
+  const vb = plan ? plan.v : 0;
+  switch(fmt.v){
+    case "x264": case "x264base":
+      a.push("-c:v","libx264","-preset",$("#preset").value);
+      if(fmt.v==="x264base") a.push("-profile:v","baseline","-level","3.0");
+      if(vb) a.push("-b:v",vb+"k","-maxrate",Math.round(vb*1.5)+"k","-bufsize",(vb*2)+"k");
+      else a.push("-crf",String(crfX264(q)));
+      break;
+    case "vp8":
+      a.push("-c:v","libvpx","-deadline","realtime","-cpu-used","5","-auto-alt-ref","0");
+      if(vb) a.push("-b:v",vb+"k","-minrate",Math.round(vb*0.5)+"k","-maxrate",Math.round(vb*1.5)+"k");
+      else a.push("-crf",String(crfVpx(q)),"-b:v","20M");
+      break;
+    case "wmv2": case "mpeg4": case "mpeg2":
+      a.push("-c:v", fmt.v==="mpeg2"?"mpeg2video":fmt.v);
+      if(fmt.v==="mpeg4") a.push("-vtag","XVID");
+      if(vb) a.push("-b:v",vb+"k","-maxrate",Math.round(vb*1.5)+"k","-bufsize",(vb*2)+"k");
+      else a.push("-q:v",String(qscale(q)));
+      if(fmt.v==="mpeg2") a.push("-g","15");
+      else a.push("-g","120");
+      break;
+  }
+  if(ab===0) a.push("-an");
+  else { a.push(...AUDIO[fmt.a],"-b:a",ab+"k"); if(fmt.ar) a.push("-ar",String(fmt.ar)); if(fmt.ac) a.push("-ac",String(fmt.ac)); }
+  if(fmt.extra) a.push(...fmt.extra);
+  a.push(out);
+  return a;
+}
+
+/* ---------- conversion ---------- */
+function updateGo(){
+  const pending=queue.filter(i=>!i.done).length;
+  $("#go").disabled = !engineReady || busy || !pending;
+  $("#go").textContent = pending>1 ? `Convert ${pending} files` : "Convert";
+}
+
+$("#go").addEventListener("click", runQueue);
+$("#cancel").addEventListener("click", async ()=>{
+  cancelled=true; setStatus("Cancelling…","busy");
+  if(NATIVE) try{ NATIVE.setBusy(false); }catch(e){}
+  await restartEngine(); busy=false; $("#cancel").classList.add("hidden"); updateGo();
+});
+
+async function runQueue(){
+  await probeChain;
+  cancelled=false; busy=true; updateGo(); $("#cancel").classList.remove("hidden");
+  if(NATIVE) try{ NATIVE.setBusy(true); }catch(e){}
+  for(const it of queue){
+    if(it.done) continue;
+    if(cancelled) break;
+    it.active=true;
+    try{ await convertOne(it); }catch(e){ if(!cancelled){ it.el.querySelector(".stage").innerHTML=`<span style="color:var(--err)">✕ Failed: ${String(e.message||e).slice(0,200)} – open the technical log for details.</span>`; } }
+    it.active=false;
+  }
+  busy=false; $("#cancel").classList.add("hidden");
+  if(NATIVE) try{ NATIVE.setBusy(false); }catch(e){}
+  if(!cancelled) setStatus("Ready (offline)","ready");
+  updateGo(); updateEstimate();
+}
+
+async function convertOne(it){
+  const fmt=FORMATS[$("#fmt").value];
+  const stage=it.el.querySelector(".stage"), bar=it.el.querySelector(".bar i"), res=it.el.querySelector(".result");
+  res.innerHTML=""; bar.style.width="0%"; bar.style.background="";
+  setStatus("Converting "+it.file.name,"busy");
+  stage.textContent="Preparing…";
+  const inName="in_"+it.id+ext(it.file.name);
+  const inp = await mountInput(it.file, inName);
+  const outName="out_"+it.id+"."+fmt.ext;
+  const dur=(it.info&&it.info.duration)||0, t0=performance.now();
+  const targetBytes = effTarget(it.file);
+  let ov={}, data=null, code=0, attempt=0;
+  while(true){
+    attempt++;
+    const args=buildArgs(inp, outName, it, ov);
+    log("\n$ ffmpeg "+args.join(" "));
+    const tA=performance.now(), pass = attempt>1 ? ` (pass ${attempt}: adjusting to reach target size)` : "";
+    logListener=m=>{
+      const mm=/time=(-?\d+):(\d+):(\d+(?:\.\d+)?)/.exec(m);
+      if(mm && dur){
+        const t=+mm[1]*3600 + +mm[2]*60 + +mm[3], p=Math.max(0,Math.min(1,t/dur));
+        bar.style.width=(p*100).toFixed(1)+"%";
+        const el=(performance.now()-tA)/1000, eta = p>0.02 ? el/p - el : NaN;
+        const sp = el>0 ? (t/el) : 0;
+        stage.textContent=`Converting${pass}… ${(p*100).toFixed(0)} % · speed ${sp.toFixed(2)}× real-time · remaining ≈ ${fmtTime(eta)}`;
+      }
+    };
+    try{ code = await ff.exec(args); } finally{ logListener=null; }
+    if(cancelled) break;
+    try{ data = await ff.readFile(outName); }catch(e){ data=null; }
+    try{ await ff.deleteFile(outName); }catch(e){}
+    if(code!==0 || !data) break;
+    // target-size mode: retry when more than 8 % over the target (max. 3 passes)
+    if(S.mode==="size" && fmt.v!=="gif" && data.length > targetBytes*1.08 && attempt<3){
+      const over = data.length/targetBytes;
+      ov = { vbScale:(ov.vbScale||1)/over*0.97, extraDown:(ov.extraDown||0) + (over>1.25 && fmt.v && !fmt.v.startsWith("x264") ? 1 : 0) };
+      continue;
+    }
+    break;
+  }
+  await unmountInput(inName);
+  if(cancelled){ stage.textContent="Cancelled."; return; }
+  if(code!==0 || !data || data.length<100){
+    const tail=logBuf.slice(-6).join(" ").slice(-300);
+    if(S.mode==="copy") throw new Error("copy mode not possible for this combination (original codecs not allowed in "+fmt.ext.toUpperCase()+"). Use Quality mode.");
+    throw new Error("FFmpeg exit code "+code+". "+tail);
+  }
+  const blob=new Blob([data.buffer],{type:fmt.mime});
+  const url=URL.createObjectURL(blob);
+  const base=it.file.name.replace(/\.[^.]+$/,"");
+  const dl=base+"_clipforge."+fmt.ext;
+  const secs=(performance.now()-t0)/1000;
+  const ratio = blob.size/it.file.size;
+  bar.style.width="100%"; bar.style.background="var(--ok)";
+  stage.textContent=`Done in ${fmtTime(secs)}.` + (it.autoRes ? ` Resolution was lowered automatically to ${it.autoRes}p so the picture stays clean at this file size.` : "") + (S.mode==="size" && blob.size>targetBytes*1.08 ? " ⚠ Could not fully reach the target – try a lower resolution or larger target." : "");
+  const diff = ratio<1 ? `<span class="saving">−${((1-ratio)*100).toFixed(0)} % smaller</span>` : `<span class="bigger">+${((ratio-1)*100).toFixed(0)} % larger</span>`;
+  res.innerHTML=`<a class="btn ghost" download></a><span>${fmtBytes(it.file.size)} → <b>${fmtBytes(blob.size)}</b></span> ${diff} <button class="btn ghost pv">Preview</button>`;
+  const a=res.querySelector("a"); a.href=url; a.download=dl; a.textContent="⬇ Save "+fmt.ext.toUpperCase();
+  if(NATIVE) wireNativeSave(a, res, blob, dl, fmt);
+  res.querySelector(".pv").onclick=()=>{
+    let v=it.el.querySelector(".preview");
+    if(v){ v.remove(); return; }
+    if(fmt.v==="gif"){ v=document.createElement("img"); v.src=url; v.className="preview"; v.style.objectFit="contain"; }
+    else { v=document.createElement(fmt.v?"video":"audio"); v.src=url; v.controls=true; v.className="preview";
+      v.onerror=()=>{ const n=document.createElement("div"); n.className="hint"; n.textContent="This browser cannot play "+fmt.ext.toUpperCase()+" files itself – save the file and open it in your media player (e.g. Windows Media Player, VLC)."; v.replaceWith(n); }; }
+    it.el.appendChild(v);
+  };
+  it.done=true; it.out={url,blob,name:dl};
+  it.el.querySelector(".plan").textContent="";
+}
+
+
+/* ---------- Android app: save to Downloads / share / open (blob downloads don't work in a WebView) ---------- */
+function b64(u8){ let s=""; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000)); return btoa(s); }
+async function nativeSave(blob, name, mime, onProg){
+  const id = NATIVE.saveStart(name, mime);
+  if(id<0) throw new Error("could not create the file in Downloads");
+  const CH = 2*MB;
+  for(let off=0; off<blob.size; off+=CH){
+    const part = new Uint8Array(await blob.slice(off, off+CH).arrayBuffer());
+    if(!NATIVE.saveChunk(id, b64(part))){ NATIVE.saveAbort(id); throw new Error("writing failed (storage full?)"); }
+    if(onProg) onProg(Math.min(1,(off+CH)/blob.size));
+  }
+  const where = NATIVE.saveEnd(id);
+  if(!where) throw new Error("could not finish the file");
+  return {id, where};
+}
+function wireNativeSave(a, res, blob, dl, fmt){
+  const btn=document.createElement("button"); btn.className="btn ghost"; btn.textContent="⬇ Save to Downloads";
+  a.replaceWith(btn);
+  let saved=null;
+  const doSave=async()=>{
+    if(saved) return saved;
+    btn.disabled=true;
+    try{ saved = await nativeSave(blob, dl, fmt.mime, p=>btn.textContent="Saving… "+Math.round(p*100)+" %"); }
+    catch(e){ btn.disabled=false; btn.textContent="⬇ Save to Downloads"; alertBox("Saving failed: "+(e.message||e)); throw e; }
+    btn.textContent="✓ Saved"; 
+    const where=document.createElement("div"); where.className="hint"; where.style.width="100%"; where.textContent="Saved in "+saved.where; res.appendChild(where);
+    return saved;
+  };
+  btn.onclick=doSave;
+  const share=document.createElement("button"); share.className="btn ghost"; share.textContent="Share";
+  share.onclick=async()=>{ const s=await doSave(); NATIVE.share(s.id); };
+  const open=document.createElement("button"); open.className="btn ghost"; open.textContent="Open in player";
+  open.onclick=async()=>{ const s=await doSave(); if(!NATIVE.open(s.id)) alertBox("No app on this phone can open "+fmt.ext.toUpperCase()+" files. Install e.g. VLC from the Play Store."); };
+  btn.after(share, open);
+}
+
+/* ---------- boot ---------- */
+$("#ver").textContent="v"+VERSION;
+refreshUI();
+if(NATIVE){ document.querySelector("#drop b").textContent="Tap to choose videos"; }
+loadEngine().catch(e=>{ setStatus("Engine failed to load","err"); log(String(e)); alertBox("The conversion engine could not start. Open this app through the included launcher (Start-ClipForge.bat) or the web address – not by double-clicking index.html. Details: "+e); });
+function alertBox(t){ const d=document.createElement("div"); d.className="card"; d.style.cssText="max-width:1100px;margin:12px auto;border-color:var(--err);color:#ffb3bb"; d.textContent=t; document.body.insertBefore(d, $("main")); }
+if(!NATIVE && "serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(()=>{});
+// expose for automated tests
+window.__clip = { queue, FORMATS, buildArgs, S, get ready(){return engineReady}, get busy(){return busy} };
+</script>
+</body>
+</html>
